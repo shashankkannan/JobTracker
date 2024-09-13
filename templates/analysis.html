@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Application Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #e9ecef;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1200px;
+            height: 90%;
+            padding: 20px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+        }
+        .summary {
+            grid-column: 1 / 2;
+            grid-row: 1 / 2;
+            background-color: #d1e7dd;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+        }
+        .filters {
+            grid-column: 2 / 3;
+            grid-row: 1 / 2;
+            background-color: #cfe2f3;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+        }
+        .job-details {
+            grid-column: 1 / 3;
+            grid-row: 2 / 3;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+            overflow: auto; /* Allows scrolling if content exceeds the container */
+        }
+        h1 {
+            font-size: 2.4em;
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        h2 {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .summary div, .filters div {
+            margin-bottom: 15px;
+        }
+        .summary div {
+            font-size: 1.2em;
+            color: #333;
+        }
+        .filters label {
+            font-weight: bold;
+            color: #333;
+        }
+        select {
+            padding: 10px;
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            font-size: 1em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        table th {
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        table tbody tr:nth-child(even) {
+            background-color: #f1f3f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Summary Section -->
+        <div class="summary">
+            <h2>Summary of Applications</h2>
+            <div>
+                <strong>Total Jobs Applied: </strong> <span id="totalJobs">0</span>
+            </div>
+            <div>
+                <strong>Total Offers Received: </strong> <span id="offersReceived">0</span>
+            </div>
+            <div>
+                <strong>Jobs In Progress: </strong> <span id="inProgress">0</span>
+            </div>
+            <div>
+                <strong>Highest Salary Offered: </strong> $<span id="highestSalary">0</span>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filters">
+            <h2>Filter Jobs</h2>
+            <div>
+                <label for="companyFilter">Company Name:</label>
+                <select id="companyFilter">
+                    <option value="">All Companies</option>
+                </select>
+            </div>
+            <div>
+                <label for="locationFilter">Location:</label>
+                <select id="locationFilter">
+                    <option value="">All Locations</option>
+                </select>
+            </div>
+            <div>
+                <label for="statusFilter">Status:</label>
+                <select id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Offer">Offer</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Job Details Table -->
+        <div class="job-details">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Job ID</th>
+                        <th>Position</th>
+                        <th>Company</th>
+                        <th>Date of Application</th>
+                        <th>Location</th>
+                        <th>Salary</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="jobsTable">
+                    <!-- Dynamic Rows will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const jobs = {{ jobs|tojson }};
+
+        // Populate stats summary
+        const totalJobs = jobs.length;
+        const offers = jobs.filter(job => job.status === 'Offer').length;
+        const inProgress = jobs.filter(job => job.status === 'In Progress').length;
+        const highestSalary = Math.max(...jobs.map(job => parseInt(job.salary)));
+
+        document.getElementById('totalJobs').textContent = totalJobs;
+        document.getElementById('offersReceived').textContent = offers;
+        document.getElementById('inProgress').textContent = inProgress;
+        document.getElementById('highestSalary').textContent = highestSalary.toLocaleString();
+
+        // Populate filter options dynamically
+        const companyFilter = document.getElementById('companyFilter');
+        const locationFilter = document.getElementById('locationFilter');
+        const companies = [...new Set(jobs.map(job => job.company_name))];
+        const locations = [...new Set(jobs.map(job => job.location))];
+
+        companies.forEach(company => {
+            const option = document.createElement('option');
+            option.value = company;
+            option.textContent = company;
+            companyFilter.appendChild(option);
+        });
+
+        locations.forEach(location => {
+            const option = document.createElement('option');
+            option.value = location;
+            option.textContent = location;
+            locationFilter.appendChild(option);
+        });
+
+        // Function to display jobs in the table
+        function displayJobs(filteredJobs) {
+            const jobsTable = document.getElementById('jobsTable');
+            jobsTable.innerHTML = ''; // Clear previous entries
+
+            filteredJobs.forEach(job => {
+                const row = `<tr>
+                    <td>${job.job_id}</td>
+                    <td>${job.job_position}</td>
+                    <td>${job.company_name}</td>
+                    <td>${job.date_of_application}</td>
+                    <td>${job.location}</td>
+                    <td>$${parseInt(job.salary).toLocaleString()}</td>
+                    <td>${job.status}</td>
+                </tr>`;
+                jobsTable.innerHTML += row;
+            });
+        }
+
+        // Initial load
+        displayJobs(jobs);
+
+        // Filter functionality
+        document.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                const companyFilterValue = companyFilter.value;
+                const locationFilterValue = locationFilter.value;
+                const statusFilterValue = document.getElementById('statusFilter').value;
+
+                const filteredJobs = jobs.filter(job => {
+                    return (
+                        (companyFilterValue === '' || job.company_name === companyFilterValue) &&
+                        (locationFilterValue === '' || job.location === locationFilterValue) &&
+                        (statusFilterValue === '' || job.status === statusFilterValue)
+                    );
+                });
+
+                displayJobs(filteredJobs);
+            });
+        });
+    </script>
+</body>
+</html>
